@@ -29,7 +29,7 @@ environments such as GNOME2, GNOME3, KDE, twm, icewm, and Cinnamon.""",
     url="https://github.com/fcaviggia/classification-banner",
     download_url="https://github.com/fcaviggia/classification-banner",
     platforms=["Linux"],
-    python_requires=">=2.6,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*",
+    python_requires=">=3.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: System Administrators",
