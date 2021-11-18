@@ -15,7 +15,7 @@ from socket import gethostname
 # or
 # `if sys.hexversion >= 0x03000000:`
 
-from ConfigParser import ConfigParser, MissingSectionHeaderError, DEFAULTSECT
+from configparser import ConfigParser, MissingSectionHeaderError, DEFAULTSECT
 
 # Global Configuration File
 CONF_FILE = "/etc/classification-banner"
@@ -23,13 +23,15 @@ CONF_FILE = "/etc/classification-banner"
 # Check if DISPLAY variable is set
 try:
     os.environ["DISPLAY"]
-    import pygtk
-    import gtk
+    import gi
+    gi.require_version("Gtk", "3.0")    
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gtk, Gdk, GObject
 except:
     try:
         import Gtk
     except:
-#       print("Error: DISPLAY environment variable not set.")
+#        print("Error: DISPLAY environment variable not set.")
 #       sys.exit(1)
         quit()
 
@@ -80,7 +82,8 @@ class ClassificationBanner:
         self.vres = y
 
         # Dynamic Resolution Scaling
-        self.monitor = gtk.gdk.Screen()
+        
+        self.monitor = Gdk.Screen.get_default()
         self.monitor.connect("size-changed", self.resize)
 
         # Newer versions of pygtk have this method
@@ -90,12 +93,13 @@ class ClassificationBanner:
             pass
 
         # Create Main Window
-        self.window = gtk.Window()
-        self.window.set_position(gtk.WIN_POS_CENTER)
-        self.window.connect("hide", self.restore)
+        self.window = Gtk.Window()
+
+        self.window.set_position(Gtk.WindowPosition.CENTER)
+
         if esc:
             self.window.connect("key-press-event", self.keypress)
-        self.window.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgcolor))
+
         self.window.set_property('skip-taskbar-hint', True)
         self.window.set_property('skip-pager-hint', True)
         self.window.set_property('destroy-with-parent', True)
@@ -104,59 +108,62 @@ class ClassificationBanner:
         self.window.set_keep_above(True)
         self.window.set_app_paintable(True)
 
-        try:
-            self.window.set_opacity(opacity)
-        except:
-            pass
-
         # Set the default window size, full-screen unless banner_width is set.
         if (banner_width <= 0):
             self.window.set_default_size(int(self.hres), 5)
         else:
             self.window.set_default_size(banner_width, 5)
 
-        # Create Main Horizontal Box to Populate
-        self.hbox = gtk.HBox()
+        #Get color for background override
+        self.bgcolor = Gdk.RGBA()
+        self.bgcolor.parse(bgcolor)
 
+        # Create Main Horizontal Box to Populate
+        self.hbox = Gtk.HBox()
+        self.hbox.override_background_color(Gtk.StateFlags.NORMAL, self.bgcolor)
+        try:
+            self.hbox.set_opacity(opacity)
+        except:
+            pass
         # Create the Center Vertical Box
-        self.vbox_center = gtk.VBox()
-        self.center_label = gtk.Label(
+        self.vbox_center = Gtk.VBox()
+        self.center_label = Gtk.Label(
             "<span font_family='%s' weight='%s' foreground='%s' size='%s'>%s</span>" %
             (face, weight, fgcolor, size, message))
         self.center_label.set_use_markup(True)
-        self.center_label.set_justify(gtk.JUSTIFY_CENTER)
+        self.center_label.set_justify(Gtk.Justification.CENTER)
         self.vbox_center.pack_start(self.center_label, True, True, 0)
 
         # Create the Right-Justified Vertical Box to Populate for hostname
-        self.vbox_right = gtk.VBox()
-        self.host_label = gtk.Label(
+        self.vbox_right = Gtk.VBox()
+        self.host_label = Gtk.Label(
             "<span font_family='%s' weight='%s' foreground='%s' size='%s'>%s</span>" %
             (face, weight, fgcolor, size, get_host()))
         self.host_label.set_use_markup(True)
-        self.host_label.set_justify(gtk.JUSTIFY_RIGHT)
+        self.host_label.set_justify(Gtk.Justification.RIGHT)
         self.host_label.set_width_chars(20)
 
         # Create the Left-Justified Vertical Box to Populate for user
-        self.vbox_left = gtk.VBox()
-        self.user_label = gtk.Label(
+        self.vbox_left = Gtk.VBox()
+        self.user_label = Gtk.Label(
             "<span font_family='%s' weight='%s' foreground='%s' size='%s'>%s</span>" %
             (face, weight, fgcolor, size, get_user()))
         self.user_label.set_use_markup(True)
-        self.user_label.set_justify(gtk.JUSTIFY_LEFT)
+        self.user_label.set_justify(Gtk.Justification.LEFT)
         self.user_label.set_width_chars(20)
 
         # Create the Right-Justified Vertical Box to Populate for ESC message
-        self.vbox_esc_right = gtk.VBox()
-        self.esc_label = gtk.Label(
+        self.vbox_esc_right = Gtk.VBox()
+        self.esc_label = Gtk.Label(
             "<span font_family='liberation-sans' weight='normal' foreground='%s' size='xx-small'>  (ESC to hide temporarily)  </span>" %
             (fgcolor))
         self.esc_label.set_use_markup(True)
-        self.esc_label.set_justify(gtk.JUSTIFY_RIGHT)
+        self.esc_label.set_justify(Gtk.Justification.RIGHT)
         self.esc_label.set_width_chars(20)
 
         # Empty Label for formatting purposes
-        self.vbox_empty = gtk.VBox()
-        self.empty_label = gtk.Label(
+        self.vbox_empty = Gtk.VBox()
+        self.empty_label = Gtk.Label(
             "<span font_family='liberation-sans' weight='normal'>                 </span>")
         self.empty_label.set_use_markup(True)
         self.empty_label.set_width_chars(20)
@@ -170,7 +177,7 @@ class ClassificationBanner:
             self.hbox.pack_start(self.vbox_center, True, True, 0)
             self.hbox.pack_start(self.vbox_left, False, True, 20)
         elif esc and not sys_info:
-            self.empty_label.set_justify(gtk.JUSTIFY_LEFT)
+            self.empty_label.set_justify(Gtk.Justification.LEFT)
             self.vbox_empty.pack_start(self.empty_label, True, True, 0)
             self.vbox_esc_right.pack_start(self.esc_label, True, True, 0)
             self.hbox.pack_start(self.vbox_esc_right, False, True, 0)
@@ -186,10 +193,10 @@ class ClassificationBanner:
         # Setup an EventBox to receive click events if click-to-move is enabled
         if click_to_move:
             # Create the EventBox to receive click input
-            self.eventbox = gtk.EventBox()
+            self.eventbox = Gtk.EventBox()
             self.eventbox.connect("button_press_event", self.mouseclick)
             self.eventbox.add(self.hbox)
-            self.eventbox.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse(bgcolor))
+            self.eventbox.modify_bg(Gtk.STATE_NORMAL, Gdk.color_parse(bgcolor))
             self.window.add(self.eventbox)
             # Create state variable
             self.centerStatus = "center"
@@ -200,10 +207,12 @@ class ClassificationBanner:
         self.width, self.height = self.window.get_size()
 
     # Restore Minimized Window
-    def restore(self, widget, data=None):
-        self.window.deiconify()
-        self.window.present()
-        return True
+    def restore(timer):
+        if(not timer.window.get_property("visible")):
+            timer.window.show()
+            timer.window.deiconify()
+            timer.window.present()        
+        return False
 
     # Destroy Classification Banner Window on Resize (Display Banner Will Relaunch)
     def resize(self, widget, data=None):
@@ -213,13 +222,10 @@ class ClassificationBanner:
     # Press ESC to hide window for 15 seconds
     def keypress(self, widget, event=None):
         if event.keyval == 65307:
-            if not gtk.events_pending():
+            if not Gtk.events_pending():
                 self.window.iconify()
                 self.window.hide()
-                time.sleep(15)
-                self.window.show()
-                self.window.deiconify()
-                self.window.present()
+                self.select_id = GObject.timeout_add(5000, self.restore)
         return True
 
     def mouseclick(self, widget, event=None):
@@ -240,12 +246,13 @@ class DisplayBanner:
     """Display Classification Banner Message"""
     def __init__(self):
         # Dynamic Resolution Scaling
-        self.monitor = gtk.gdk.Screen()
-        self.monitor.connect("size-changed", self.resize)
+        self.display = Gdk.Display.get_default()
+        self.screen = self.display.get_default_screen()
+        self.screen.connect("size-changed", self.resize)
 
         # Newer versions of pygtk have this method
         try:
-            self.monitor.connect("monitors-changed", self.resize)
+            self.display.connect("monitors-changed", self.resize)
         except:
             pass
 
@@ -390,40 +397,16 @@ class DisplayBanner:
 
     # Launch the Classification Banner Window(s)
     def execute(self, options):
-        self.num_monitor = self.monitor.get_n_monitors()
+        self.num_monitor = self.screen.get_n_monitors()
 
-        if options.hres == 0 or options.vres == 0:
-            # Try Xrandr to determine primary monitor resolution
-            try:
-                self.screen = os.popen("xrandr | grep ' connected ' | awk '{ print $3 }'").readlines()[0]
-                if ("+" in self.screen):
-                    # This means a multi-monitor setup. The GTK method fallback will properly handle this.
-                    raise Exception
-                self.x = self.screen.split('x')[0]
-                self.y = self.screen.split('x')[1].split('+')[0]
-
-            except:
-                try:
-                    self.screen = os.popen("xrandr | grep ' current ' | awk '{ print $8$9$10+0 }'").readlines()[0]
-                    self.x = self.screen.split('x')[0]
-                    self.y = self.screen.split('x')[1].split('+')[0]
-
-                except:
-                    self.screen = os.popen("xrandr | grep '^\*0' | awk '{ print $2$3$4 }'").readlines()[0]
-                    self.x = self.screen.split('x')[0]
-                    self.y = self.screen.split('x')[1].split('+')[0]
-
-                else:
-                    # Fail back to GTK method
-                    self.display = gtk.gdk.display_get_default()
-                    self.screen = self.display.get_default_screen()
-                    self.x = self.screen.get_width()
-                    self.y = self.screen.get_height()
+        if options.hres == 0 or options.vres == 0:           
+            # Fail back to GTK method                             
+            self.x = self.screen.get_width()
+            self.y = self.screen.get_height()
         else:
             # Resoultion Set Staticly
             self.x = options.hres
             self.y = options.vres
-
         
         if not options.spanning and self.num_monitor > 1:
             # Get the geometry of the monitors. Subtract the user-defined taskbar_offset from the first monitor's self.x value
@@ -432,12 +415,18 @@ class DisplayBanner:
             # overlap into the second's, and if the user is using Gnome, they'll be at different heights, which is ugly. 
             # TODO: If this is ever ported to Python 3, the GTK3 method get_monitor_workarea would be a much less hacky way of doing this.
             for i in range(self.num_monitor):
-                mon_geo = self.screen.get_monitor_geometry(i)
-                self.x_location, self.y_location, self.x, self.y = mon_geo
+                #mon_geo = self.screen.get_monitor_geometry(i)
+                mon_geo = self.display.get_monitor(i).get_workarea()
+                self.x_location = mon_geo.x
+                self.y_location = mon_geo.y
+                self.x = mon_geo.width
+                self.y = mon_geo.height
+                #self.x_location, self.y_location, self.x, self.y = mon_geo
                 if (i == 0):
                     self.x -= options.taskbar_offset
                 self.banners(options)
         else:
+
             self.x_location = 0
             self.y_location = 0
             self.banners(options)
@@ -491,4 +480,4 @@ class DisplayBanner:
 
 def main():
     run = DisplayBanner()
-    gtk.main()
+    Gtk.main()
