@@ -6,16 +6,13 @@ import sys
 import os
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from tempfile import TemporaryFile
-import time
+
 from socket import gethostname
-
-# Python version check
-# Check the version by comparing sys.hexversion to the desired version
-# `if sys.hexversion < 0x02070000:`
-# or
-# `if sys.hexversion >= 0x03000000:`
-
 from configparser import ConfigParser, MissingSectionHeaderError, DEFAULTSECT
+import gi
+gi.require_version("Gtk", "3.0")    
+gi.require_version("Gdk", "3.0")
+from gi.repository import Gtk, Gdk, GObject
 
 # Global Configuration File
 CONF_FILE = "/etc/classification-banner"
@@ -23,17 +20,10 @@ CONF_FILE = "/etc/classification-banner"
 # Check if DISPLAY variable is set
 try:
     os.environ["DISPLAY"]
-    import gi
-    gi.require_version("Gtk", "3.0")    
-    gi.require_version("Gdk", "3.0")
-    from gi.repository import Gtk, Gdk, GObject
 except:
-    try:
-        import Gtk
-    except:
-#        print("Error: DISPLAY environment variable not set.")
-#       sys.exit(1)
-        quit()
+    print("Error: DISPLAY environment variable not set.")
+    sys.exit(1)
+    quit()
 
 # Returns Username
 def get_user():
@@ -41,9 +31,7 @@ def get_user():
         user = os.getlogin()
     except:
         user = ''
-        pass
     return user
-
 
 # Returns Hostname
 def get_host():
@@ -225,7 +213,7 @@ class ClassificationBanner:
             if not Gtk.events_pending():
                 self.window.iconify()
                 self.window.hide()
-                self.select_id = GObject.timeout_add(5000, self.restore)
+                GObject.timeout_add(5000, self.restore)
         return True
 
     def mouseclick(self, widget, event=None):
